@@ -193,6 +193,14 @@ S.player = null;
 S.playerId = "sb-player";
 
 /**
+ * The src to use for a full-bleed background image in the modal.
+ *
+ * @type    {String}
+ * @public
+ */
+S.background = null;
+
+/**
  * Various options that control Shadowbox' behavior.
  *
  * @type    {Object}
@@ -235,6 +243,23 @@ S.options = {
      * @type    {Boolean}
      */
     enableKeys: true,
+    
+    /**
+     * Defines the default key events when modal is active.
+     * Set to false if they are to be bypassed, or
+     * replace with a new object in init, using 'Shadowbox'
+     * not 'S' as the main object in the values.
+     *
+     * @type    {Object}
+     */
+    enableKeys: {
+        81: function(){S.close},    // q
+        88: function(){S.close},    // x
+        27: function(){S.close},    // esc
+        37: function(){S.previous}, // left arrow 
+        39: function(){S.next},     // right arrow
+        32: function(){typeof slideTimer == "number" ? S.pause : S.play}    // space
+    },
 
     /**
      * Parameters to pass to flash <object>'s.
@@ -462,8 +487,13 @@ S.init = function(options, callback) {
  * @public
  */
 S.open = function(obj) {
+    
     if (open)
         return;
+    
+    // check if full-bleed background is being used. if so, set the background.
+    S.background = obj.background || "";
+    if (S.background !="") wrapper.style.background = "url(" + S.background + ")";
 
     var gc = S.makeGallery(obj);
     S.gallery = gc[0];
@@ -629,10 +659,11 @@ S.previous = function() {
  *                                      the edge of the viewport
  * @param   {Boolean}   preserveAspect  True to preserve the original aspect ratio when the
  *                                      given dimensions are too large
+ * @param   {Number}    topPosition     The position of the object from the top of the window                                     
  * @return  {Object}                    The new dimensions object
  * @public
  */
-S.setDimensions = function(height, width, maxHeight, maxWidth, topBottom, leftRight, padding, preserveAspect) {
+S.setDimensions = function(height, width, maxHeight, maxWidth, topBottom, leftRight, padding, preserveAspect, topPosition) {
     var originalHeight = height,
         originalWidth = width;
 
@@ -658,13 +689,22 @@ S.setDimensions = function(height, width, maxHeight, maxWidth, topBottom, leftRi
             height = Math.round((originalHeight / originalWidth) * width);
         }
     }
+    
+    // if the option value for topPosition is an integer, use the configured value instead of default vertical centering
+    var top;
+    if (!isNaN(parseFloat(topPosition)) && isFinite(topPosition)) {
+        top = $(window).scrollTop() + topPosition;
+    }
+    else {
+        top = Math.floor((maxHeight - (height + extraHeight)) / 2 - (padding * 2));
+    }
 
     S.dimensions = {
         height:         height + topBottom,
         width:          width + leftRight,
         innerHeight:    height,
         innerWidth:     width,
-        top:            Math.floor((maxHeight - (height + extraHeight)) / 2 + padding),
+        top:            top,
         left:           Math.floor((maxWidth - (width + extraWidth)) / 2 + padding),
         oversized:      oversized
     };
@@ -774,7 +814,7 @@ S.makeObject = function(link, options) {
     // remove link-level options from top-level options
     if (options) {
         options = apply({}, options);
-        each(["player", "title", "height", "width", "gallery"], function(i, o) {
+        each(["player", "title", "background", "height", "width", "gallery"], function(i, o) {
             if (typeof options[o] != "undefined") {
                 obj[o] = options[o];
                 delete options[o];
@@ -918,10 +958,11 @@ function filterGallery() {
  * @param   {Boolean}   on      True to enable the listener, false to disable
  * @private
  */
-function listenKeys(on) {
-    if (!S.options.enableKeys)
-        return;
-
+function listenKeys(on, eventKeys) {
+    if (!S.options.enableKeys || !eventKeys) {
+        return
+    }
+    
     (on ? addEvent : removeEvent)(document, "keydown", handleKey);
 }
 
@@ -936,29 +977,16 @@ function handleKey(e) {
     if (e.metaKey || e.shiftKey || e.altKey || e.ctrlKey) {
         return;
     }
-
-    var handler;
-
-    switch (e.keyCode) {
-    case 81: // q
-    case 88: // x
-    case 27: // esc
-        handler = S.close;
-        break;
-    case 37: // left
-        handler = S.previous;
-        break;
-    case 39: // right
-        handler = S.next;
-        break;
-    case 32: // space
-        handler = typeof slideTimer == "number" ? S.pause : S.play;
-        break;
-    }
-
-    if (handler) {
-        e.preventDefault();
-        handler();
+    
+    var code = e.keyCode;
+    
+    for (key in S.options.eventKeys) {
+        if (code == key) {
+            e.preventDefault();
+            if (S.options.eventKeys[key]) {
+                S.options.eventKeys[key].call();
+            }
+        }
     }
 }
 
@@ -1062,7 +1090,7 @@ function finish() {
     if (!S.isPaused())
         S.play(); // kick off next slide
 
-    listenKeys(true);
+    listenKeys(true, S.options.eventKeys);
 }
 
 /**

@@ -304,8 +304,7 @@ function showBars(callback) {
     // clear visibility before animating into view
     titleInner.style.visibility = infoInner.style.visibility = "";
 
-    if (titleInner.innerHTML != "")
-        animate(titleInner, "marginTop", 0, duration);
+    animate(titleInner, "marginTop", 0, duration);
     animate(infoInner, "marginTop", 0, duration, callback);
 }
 
@@ -390,9 +389,12 @@ function setDimensions(height, width) {
 
         // only preserve aspect ratio if there is something to display and
         // it's not draggable
-        preserveAspect = (S.player && S.options.handleOversize != "drag");
+        preserveAspect = (S.player && S.options.handleOversize != "drag"),
+        
+        // either default top position or set manually in options
+        topPosition = S.options.topPosition;
 
-    return S.setDimensions(height, width, maxHeight, maxWidth, topBottom, leftRight, padding, preserveAspect);
+    return S.setDimensions(height, width, maxHeight, maxWidth, topBottom, leftRight, padding, preserveAspect, topPosition);
 }
 
 /**
@@ -415,23 +417,27 @@ K.markup = "" +
     '<div id="sb-wrapper">' +
         '<div id="sb-title">' +
             '<div id="sb-title-inner"></div>' +
+            '<div id="sb-nav">' +
+                '<a id="sb-nav-close" onclick="Shadowbox.close()"></a>' +
+                '<a id="sb-nav-next" onclick="Shadowbox.next()"></a>' +
+                '<a id="sb-nav-play" onclick="Shadowbox.play()"></a>' +
+                '<a id="sb-nav-pause" onclick="Shadowbox.pause()"></a>' +
+                '<a id="sb-nav-previous" onclick="Shadowbox.previous()"></a>' +
+            '</div>' +
         '</div>' +
         '<div id="sb-wrapper-inner">' +
             '<div id="sb-body">' +
                 '<div id="sb-body-inner"></div>' +
-                '<div id="sb-loading"></div>' +
+                '<div id="sb-loading">' +
+                    '<div id="sb-loading-inner">' +
+                        '<span>{loading}</span>' +
+					'</div>' +
+                '</div>' +
             '</div>' +
         '</div>' +
         '<div id="sb-info">' +
             '<div id="sb-info-inner">' +
                 '<div id="sb-counter"></div>' +
-                '<div id="sb-nav">' +
-                    '<a id="sb-nav-close" onclick="Shadowbox.close()"></a>' +
-                    '<a id="sb-nav-next" onclick="Shadowbox.next()"></a>' +
-                    '<a id="sb-nav-play" onclick="Shadowbox.play()"></a>' +
-                    '<a id="sb-nav-pause" onclick="Shadowbox.pause()"></a>' +
-                    '<a id="sb-nav-previous" onclick="Shadowbox.previous()"></a>' +
-                '</div>' +
             '</div>' +
         '</div>' +
     '</div>' +
@@ -537,6 +543,13 @@ K.options = {
      * @type    {Boolean}
      */
     showOverlay: true,
+    
+    /**
+     * Number of pixels that the overlay is placed from the top of the window.
+     *
+     * @type    {Number}
+     */
+    topPosition: 45,
 
     /**
      * Names of elements that should be hidden when the overlay is enabled.

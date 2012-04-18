@@ -17,9 +17,12 @@ if (navigator.plugins && navigator.plugins.length) {
     });
     names = names.join(',');
 
+    var f4m = arrayIndexOf(names, "Flip4Mac") > -1;
     S.plugins = {
-        fla:    names.contains('Shockwave Flash'),
-        qt:     names.contains('QuickTime')
+        fla:    arrayIndexOf(names, "Shockwave Flash") > -1,
+        qt:     arrayIndexOf(names, "QuickTime") > -1,
+        wmp:    !f4m && arrayIndexOf(names, "Windows Media") > -1,
+        f4m:    f4m
     };
 } else {
     var detectPlugin = function(name) {
